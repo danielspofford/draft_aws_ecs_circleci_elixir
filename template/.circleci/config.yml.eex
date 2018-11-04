@@ -1,0 +1,139 @@
+version: 2
+<% upper_app_name = String.upcase(app_name) %>
+<% image_key = upper_app_name <> "_IMAGE" %>
+<% prod_image_key = "PRODUCTION_" <> image_key %>
+<%= prod_image_key %>: &prod_image <%= production_image %>
+
+production_environment: &production_environment
+  ENV: production
+  <%= image_key %>: *prod_image
+  CLUSTER: <%= cluster %>
+  SERVICE: <%= service %>
+  TASK_DEF: <%= task %>
+  SLACK_CHANNEL: <%= slack_build_channel %>
+
+deploy: &deploy
+  docker:
+    - image: verypossible/ecs-sentry-deployment-image:dd14594
+  steps:
+    - checkout
+    - run: |
+        RELEASE=$(date -u +'%y.%m.%dT%H:%M:%S').$(git rev-parse --short HEAD)
+
+        sentry-cli releases new $RELEASE
+        sentry-cli releases set-commits --auto $RELEASE
+        start=$(date +%s)
+
+        # Create a new task definition with the new container image
+        ecs copy $CLUSTER $SERVICE -i web <%= image_key %>:$CIRCLE_SHA1
+
+        # Run our migration which will pull the latest task definition, which we just created above
+        ecs run $CLUSTER $TASK_DEF --service=$SERVICE -c web "/opt/app/bin/<%= app_name %> migrate"
+
+        # Deploy the new task def
+        ecs deploy $CLUSTER $SERVICE --no-deregister --task $TASK_DEF --timeout 600 --rollback
+
+        now=$(date +%s)
+        sentry-cli releases deploys $RELEASE new -e prod -t $((now-start))
+        sentry-cli releases finalize $RELEASE
+    - run: |
+        curl -X POST --data-urlencode \
+          "payload={\
+            \"channel\": \"#$SLACK_CHANNEL\",\
+            \"username\": \"CircleCI\",\
+            \"text\": \"<%= app_name %> deployed to $ENV\",\
+            \"icon_emoji\": \":elixir:\"\
+          }" <%= slack_hook %>
+
+jobs:
+  test_elixir:
+    docker:
+      - image: circleci/elixir:1.7.3
+        environment:
+          MIX_ENV: test
+      - image: postgres:9.6.5-alpine
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-deps-and-build-{{ checksum ".tool-versions" }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+            - v1-deps-and-build-{{ checksum ".tool-versions" }}-{{ .Branch }}
+            - v1-deps-and-build-{{ checksum ".tool-versions" }}
+      - restore_cache:
+          keys:
+            - v1-build-{{ checksum ".tool-versions" }}-{{ .Branch }}
+            - v1-build-{{ checksum ".tool-versions" }}
+      - restore_cache:
+          keys:
+            - v1-mix-{{ checksum ".tool-versions" }}
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get
+      - run: mix compile
+      - run: MIX_ENV=prod mix compile
+      - run: MIX_ENV=prod mix dialyzer --plt
+      - save_cache:
+          key: v1-mix-cache-{{ checksum ".tool-versions" }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+          paths:
+            - deps
+            - _build
+      - save_cache:
+          key: v1-mix-cache-{{ checksum ".tool-versions" }}-{{ .Branch }}
+          paths:
+            - deps
+            - _build
+      - save_cache:
+          key: v1-mix-cache-{{ checksum ".tool-versions" }}
+          paths:
+            - deps
+            - _build
+      - save_cache:
+          key: v1-mix-cache-{{ checksum ".tool-versions" }}
+          paths: ~/.mix
+      - run:
+          name: Wait for DB
+          command: dockerize -wait tcp://localhost:5432 -timeout 1m
+      - run: mix ecto.create
+      - run: mix test
+      - run: mix credo
+      - run: mix format --check-formatted
+      - run: MIX_ENV=prod mix dialyzer --halt-exit-status
+      - run: MIX_ENV=prod mix compile --warnings-as-errors
+
+  build:
+    machine: true
+    environment:
+      <%= prod_image_key%>: *prod_image
+    steps:
+      - checkout
+      - run: |
+          docker build -t cc:latest .
+          docker tag cc:latest <%= prod_image_key %>:$CIRCLE_SHA1
+          eval $(aws ecr get-login --no-include-email --region us-east-2)
+          docker push <%= prod_image_key %>:$CIRCLE_SHA1
+
+  deploy_production:
+    <<: *deploy
+    environment:
+      <<: *production_environment
+
+workflows:
+  version: 2
+  test_and_deploy:
+    jobs:
+      - test_elixir
+      - build:
+          requires:
+            - test_elixir
+          filters:
+            branches:
+              only:
+                - master
+      - deploy_production:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
