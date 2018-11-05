@@ -31,4 +31,5 @@ mix draft.github danielspofford/draft_aws_ecs_circleci_elixir \
 ```
 
 `--app-name` may only contain letters, numbers, and underscores.
+
 `--production-image` should not include a `:tag` suffix.
