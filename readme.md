@@ -23,11 +23,13 @@ Execute this template:
 mix draft.github danielspofford/draft_aws_ecs_circleci_elixir \
   --app-name=your_app_name \
   --production-image=your_production_image \
-  --cluster=your_ecs_cluster \
-  --service=your_ecs_service \
-  --task=your_ecs_task \
-  --slack_build_channel=your_slack_channel \
-  --slack_hook=your_slack_hook
+  --cluster=your_cluster_name \
+  --service=your_service_name \
+  --task=your_task_definition_name \
+  --slack-build-channel=your_slack_channel \
+  --slack-hook=your_slack_hook
 ```
 
 `--app-name` may only contain letters, numbers, and underscores.
+
+`--production-image` should not include a `:tag` suffix.
