@@ -26,8 +26,8 @@ mix draft.github danielspofford/draft_aws_ecs_circleci_elixir \
   --cluster=your_cluster_name \
   --service=your_service_name \
   --task=your_task_definition_name \
-  --slack_build_channel=your_slack_channel \
-  --slack_hook=your_slack_hook
+  --slack-build-channel=your_slack_channel \
+  --slack-hook=your_slack_hook
 ```
 
 `--app-name` may only contain letters, numbers, and underscores.
