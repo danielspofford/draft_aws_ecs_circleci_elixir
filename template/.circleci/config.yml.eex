@@ -1,7 +1,9 @@
 version: 2
-<% upper_app_name = String.upcase(app_name) %>
-<% image_key = upper_app_name <> "_IMAGE" %>
-<% prod_image_key = "PRODUCTION_" <> image_key %>
+<%
+  upper_app_name = String.upcase(app_name)
+  image_key = upper_app_name <> "_IMAGE"
+  prod_image_key = "PRODUCTION_" <> image_key
+%>
 <%= prod_image_key %>: &prod_image <%= production_image %>
 
 production_environment: &production_environment
