@@ -110,9 +110,9 @@ jobs:
             --build-arg APP_VSN=<%= app_version %> \
             --build-arg APP_NAME=<%= app_name %> \
             -t cc:latest .
-          docker tag cc:latest <%= prod_image_key %>:$CIRCLE_SHA1
+          docker tag cc:latest $<%= prod_image_key %>:$CIRCLE_SHA1
           eval $(aws ecr get-login --no-include-email --region us-east-2)
-          docker push <%= prod_image_key %>:$CIRCLE_SHA1
+          docker push $<%= prod_image_key %>:$CIRCLE_SHA1
 
   deploy_production:
     <<: *deploy
