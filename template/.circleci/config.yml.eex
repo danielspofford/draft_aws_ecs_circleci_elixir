@@ -64,10 +64,6 @@ jobs:
             - v1-deps-and-build-{{ checksum ".tool-versions" }}
       - restore_cache:
           keys:
-            - v1-build-{{ checksum ".tool-versions" }}-{{ .Branch }}
-            - v1-build-{{ checksum ".tool-versions" }}
-      - restore_cache:
-          keys:
             - v1-mix-{{ checksum ".tool-versions" }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
@@ -76,17 +72,17 @@ jobs:
       - run: MIX_ENV=prod mix compile
       - run: MIX_ENV=prod mix dialyzer --plt
       - save_cache:
-          key: v1-mix-cache-{{ checksum ".tool-versions" }}-{{ .Branch }}-{{ checksum "mix.lock" }}
+          key: v1-deps-and-build-{{ checksum ".tool-versions" }}-{{ .Branch }}-{{ checksum "mix.lock" }}
           paths:
             - deps
             - _build
       - save_cache:
-          key: v1-mix-cache-{{ checksum ".tool-versions" }}-{{ .Branch }}
+          key: v1-deps-and-build-{{ checksum ".tool-versions" }}-{{ .Branch }}
           paths:
             - deps
             - _build
       - save_cache:
-          key: v1-mix-cache-{{ checksum ".tool-versions" }}
+          key: v1-deps-and-build-{{ checksum ".tool-versions" }}
           paths:
             - deps
             - _build
