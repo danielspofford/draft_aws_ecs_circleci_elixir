@@ -87,7 +87,7 @@ jobs:
             - deps
             - _build
       - save_cache:
-          key: v1-mix-cache-{{ checksum ".tool-versions" }}
+          key: v1-mix-{{ checksum ".tool-versions" }}
           paths: ~/.mix
       - run:
           name: Wait for DB
