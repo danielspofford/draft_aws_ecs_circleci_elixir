@@ -27,9 +27,10 @@ mix draft.github danielspofford/draft_aws_ecs_circleci_elixir \
   --service=your_service_name \
   --task=your_task_definition_name \
   --slack-build-channel=your_slack_channel \
-  --slack-hook=your_slack_hook
+  --slack-hook=your_slack_hook \
+  --app-version=your_app_version
 ```
 
-`--app-name` may only contain letters, numbers, and underscores.
-
-`--production-image` should not include a `:tag` suffix.
+- `--app-name` may only contain letters, numbers, and underscores.
+- `--production-image` should not include a `:tag` suffix.
+- `--app-version` should resemble an Elixir app version like `0.1.0`.
